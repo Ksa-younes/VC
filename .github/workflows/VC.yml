@@ -16,30 +16,33 @@ jobs:
 
       - name: Clean Current Directory
         run: |
-          # Remove everything except critical git/github files
           find . -maxdepth 1 ! -name '.' ! -name '..' ! -name '.git' ! -name '.github' -exec rm -rf {} +
 
       - name: Fetch Remote Files
         run: |
+          mkdir -p assets
           BASE_URL="https://vi-ra-caisse-561480809159.europe-west2.run.app"
+          HEADERS="-H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36' -H 'Referer: $BASE_URL/' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'"
+
+          # 1. Download index.html
+          eval curl -L $HEADERS -o index.html "$BASE_URL/"
           
-          # 1. Download the main entry point
-          curl -H "User-Agent: Mozilla/5.0" -L -o index.html "$BASE_URL/"
+          # 2. Extract and download assets
+          # This pulls every file listed in the html that is inside an /assets/ folder
+          grep -oP 'assets/[^"\s?]+' index.html | sort -u | while read -r file; do
+             echo "Downloading $file..."
+             eval curl -L $HEADERS -o "$file" "$BASE_URL/$file"
+          done
           
-          # 2. Use wget to mirror the /assets directory
-          # -r: recursive, -np: no-parent, -nd: no-directories (flattens structure)
-          # -A: accept only these extensions to avoid junk
-          wget -r -np -nd -A "js,css,png,jpg,jpeg,gif,ico,json" -P ./assets "$BASE_URL/assets/"
-          
-          # 3. Download standalone root files that aren't in assets
-          curl -H "User-Agent: Mozilla/5.0" -L -o index.css "$BASE_URL/index.css" || true
-          curl -H "User-Agent: Mozilla/5.0" -L -o _websocket-interceptor.js "$BASE_URL/_websocket-interceptor.js?v=1" || true
-          curl -H "User-Agent: Mozilla/5.0" -L -o _service-worker.js "$BASE_URL/_service-worker.js" || true
+          # 3. Download other critical files
+          eval curl -L $HEADERS -o index.css "$BASE_URL/index.css" || true
+          eval curl -L $HEADERS -o _websocket-interceptor.js "$BASE_URL/_websocket-interceptor.js?v=1" || true
+          eval curl -L $HEADERS -o _service-worker.js "$BASE_URL/_service-worker.js" || true
 
       - name: Push to Pipeline
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add .
-          git commit -m "chore: auto-sync assets from remote" || echo "No changes to commit"
+          git commit -m "chore: force sync assets" || echo "No changes to commit"
           git push

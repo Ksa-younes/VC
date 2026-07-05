@@ -1,3 +1,4 @@
+```yaml
 name: Sync Loop
 
 on:
@@ -18,8 +19,16 @@ jobs:
 
       - name: Fetch Remote Files
         run: |
-          wget -m -p -k -nH --cut-dirs=0 https://vi-ra-caisse-561480809159.europe-west2.run.app
+          wget -m -p -E -k -nH --cut-dirs=0 -U "Mozilla/5.0" https://vi-ra-caisse-561480809159.europe-west2.run.app
           rm -f robots.txt
+
+      - name: Flatten Directory Structure
+        run: |
+          # Move files from the domain folder to root
+          if [ -d "vi-ra-caisse-561480809159.europe-west2.run.app" ]; then
+            cp -rf vi-ra-caisse-561480809159.europe-west2.run.app/* .
+            rm -rf vi-ra-caisse-561480809159.europe-west2.run.app
+          fi
 
       - name: Purge Tracking Elements
         run: |
@@ -29,20 +38,11 @@ jobs:
             sed -i '/gtag(/d' index.html
           fi
 
-      - name: Strip Comments and Minify
-        run: |
-          if [ -d assets ]; then
-            for f in assets/*.js; do
-              npx terser "$f" --compress --mangle --comments false -o "$f"
-            done
-          fi
-          if [ -f index.html ]; then
-            npx html-minifier --collapse-whitespace --remove-comments --remove-redundant-attributes --remove-script-type-attributes --remove-style-link-type-attributes --minify-css true --minify-js true -o index.html index.html
-          fi
-
       - name: Push to Pipeline
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add .
-          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: sync and optimize assets" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: sync remote assets" && git push)
+
+```

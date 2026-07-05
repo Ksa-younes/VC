@@ -1,33 +1,11 @@
-name: VC
-
-on:
-  workflow_dispatch:
-  schedule:
-    - cron: '*/59 * * * *'
-
-jobs:
-  build-and-sync:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Local Repo
-        uses: actions/checkout@v4
-
-      - name: Clean Current Directory
+- name: VC UPDATE
         run: |
-          find . -maxdepth 1 ! -name '.' ! -name '..' ! -name '.git' ! -name '.github' -exec rm -rf {} +
-
-      - name: Fetch and Mirror Remote
-        run: |
-          # -m: mirror (recursive)
-          # -p: get all page requisites (css, js, images)
-          # -k: convert links to be relative to the local files
-          # -nH: no host directory
-          # -E: adjust file extensions
-          wget -m -p -k -nH -E -e robots=off -U "Mozilla/5.0" https://vi-ra-caisse-561480809159.europe-west2.run.app
-
-      - name: Push to Pipeline
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add .
-          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: full sync and mirror" && git push)
+          mkdir -p assets
+          
+          BASE_URL="https://vi-ra-caisse-561480809159.europe-west2.run.app"
+          
+          curl -H "User-Agent: Mozilla/5.0" -L -o index.html "$BASE_URL/"
+          curl -H "User-Agent: Mozilla/5.0" -L -o assets/index-CUzW0L13.js "$BASE_URL/assets/index-CUzW0L13.js"
+          curl -H "User-Agent: Mozilla/5.0" -L -o _websocket-interceptor.js "$BASE_URL/_websocket-interceptor.js?v=1"
+          
+          curl -H "User-Agent: Mozilla/5.0" -L -o _service-worker.js "$BASE_URL/_service-worker.js" || echo "Service worker not found, skipping."
